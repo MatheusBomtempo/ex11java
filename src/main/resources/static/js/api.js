@@ -267,14 +267,18 @@ async function criarVenda(venda) {
         const contentType = response.headers.get('content-type');
         let errorMessage = 'Erro ao criar venda';
         
-        if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.erro || errorMessage;
-        } else {
-            const text = await response.text();
-            if (text) {
-                errorMessage = text;
+        try {
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorData.erro || errorMessage;
+            } else {
+                const text = await response.text();
+                if (text) {
+                    errorMessage = text;
+                }
             }
+        } catch (e) {
+            console.error('Erro ao processar resposta:', e);
         }
         
         showError(errorMessage);

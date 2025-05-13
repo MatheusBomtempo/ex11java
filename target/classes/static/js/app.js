@@ -327,7 +327,7 @@ async function carregarVendas() {
             <td>${venda.cliente.nome}</td>
             <td>${formatarMoeda(venda.valorTotal)}</td>
             <td>${formatarData(venda.data)}</td>
-            <td>${venda.formaPagamento}</td>
+            <td>${venda.formaPagamento.tipo}</td>
             <td>
                 <button class="btn btn-sm btn-primary btn-action" onclick="editarVenda(${venda.id})">Editar</button>
                 <button class="btn btn-sm btn-danger btn-action" onclick="excluirVenda(${venda.id})">Excluir</button>
@@ -366,7 +366,7 @@ async function carregarProdutosSelect() {
 async function salvarVenda() {
     const clienteId = parseInt(document.getElementById('vendaCliente').value);
     const produtosIds = Array.from(document.getElementById('vendaProdutos').selectedOptions).map(option => parseInt(option.value));
-    const formaPagamento = document.getElementById('vendaFormaPagamento').value;
+    const formaPagamentoTipo = document.getElementById('vendaFormaPagamento').value;
 
     if (!clienteId) {
         showError('Selecione um cliente');
@@ -378,7 +378,7 @@ async function salvarVenda() {
         return;
     }
 
-    if (!formaPagamento) {
+    if (!formaPagamentoTipo) {
         showError('Selecione uma forma de pagamento');
         return;
     }
@@ -387,10 +387,15 @@ async function salvarVenda() {
         cliente: {
             id: clienteId
         },
-        produtos: produtosIds.map(id => ({
-            codigo: id
+        itens: produtosIds.map(id => ({
+            produto: {
+                codigo: id
+            },
+            quantidade: 1
         })),
-        formaPagamento: formaPagamento
+        formaPagamento: {
+            tipo: formaPagamentoTipo
+        }
     };
 
     try {
@@ -411,11 +416,11 @@ async function editarVenda(id) {
         const venda = await response.json();
 
         document.getElementById('vendaCliente').value = venda.cliente.id;
-        document.getElementById('vendaFormaPagamento').value = venda.formaPagamento;
+        document.getElementById('vendaFormaPagamento').value = venda.formaPagamento.tipo;
 
         const produtosSelect = document.getElementById('vendaProdutos');
         Array.from(produtosSelect.options).forEach(option => {
-            option.selected = venda.produtos.some(p => p.codigo === parseInt(option.value));
+            option.selected = venda.itens.some(item => item.produto.codigo === parseInt(option.value));
         });
 
         // Armazenar o ID da venda sendo editada
