@@ -8,6 +8,9 @@ function showSection(sectionId) {
 
 function showModal(modalId) {
     const modal = new bootstrap.Modal(document.getElementById(modalId));
+    if (modalId === 'produtoModal') {
+        carregarCategoriasSelect();
+    }
     modal.show();
 }
 
@@ -124,48 +127,82 @@ async function carregarCategoriasSelect() {
     });
 }
 
+let produtoEditando = null;
+
+async function editarProduto(codigo) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/produtos/${codigo}`);
+        if (!response.ok) {
+            throw new Error('Erro ao buscar produto');
+        }
+        const produto = await response.json();
+        produtoEditando = produto;
+
+        document.getElementById('produtoTipo').value = produto.tipo || 'ALIMENTICIO';
+        document.getElementById('produtoNome').value = produto.nome;
+        document.getElementById('produtoDescricao').value = produto.descricao;
+        document.getElementById('produtoPrecoCusto').value = produto.precoCusto;
+        document.getElementById('produtoPrecoVenda').value = produto.precoVenda;
+        document.getElementById('produtoQuantidadeEstoque').value = produto.quantidadeEstoque;
+        document.getElementById('produtoCategoria').value = produto.categoria.codigo;
+
+        showModal('produtoModal');
+    } catch (error) {
+        console.error('Erro ao carregar produto:', error);
+        showError(`Erro ao carregar produto: ${error.message}`);
+    }
+}
+
 async function salvarProduto() {
+    const tipo = document.getElementById('produtoTipo').value;
     const nome = document.getElementById('produtoNome').value;
     const descricao = document.getElementById('produtoDescricao').value;
-    const precoCusto = parseFloat(document.getElementById('produtoPrecoCusto').value);
-    const precoVenda = parseFloat(document.getElementById('produtoPrecoVenda').value);
-    const quantidadeEstoque = parseInt(document.getElementById('produtoQuantidadeEstoque').value);
+    const precoCusto = parseFloat(document.getElementById('produtoPrecoCusto').value) || 0;
+    const precoVenda = parseFloat(document.getElementById('produtoPrecoVenda').value) || 0;
+    const quantidadeEstoque = parseInt(document.getElementById('produtoQuantidadeEstoque').value) || 0;
     const categoriaCodigo = parseInt(document.getElementById('produtoCategoria').value);
 
+    if (!categoriaCodigo) {
+        showError('Por favor, selecione uma categoria');
+        return;
+    }
+
     const produto = {
+        tipo,
         nome,
         descricao,
         precoCusto,
         precoVenda,
         quantidadeEstoque,
-        categoria: {
-            codigo: categoriaCodigo
-        }
+        categoriaCodigo
     };
 
-    await criarProduto(produto);
-    hideModal('produtoModal');
-    carregarProdutos();
-}
-
-async function editarProduto(codigo) {
-    const produtos = await listarProdutos();
-    const produto = produtos.find(p => p.codigo === codigo);
-
-    document.getElementById('produtoNome').value = produto.nome;
-    document.getElementById('produtoDescricao').value = produto.descricao;
-    document.getElementById('produtoPrecoCusto').value = produto.precoCusto;
-    document.getElementById('produtoPrecoVenda').value = produto.precoVenda;
-    document.getElementById('produtoQuantidadeEstoque').value = produto.quantidadeEstoque;
-    document.getElementById('produtoCategoria').value = produto.categoria.codigo;
-
-    showModal('produtoModal');
+    try {
+        if (produtoEditando) {
+            await atualizarProduto(produtoEditando.codigo, produto);
+            produtoEditando = null;
+        } else {
+            await criarProduto(produto);
+        }
+        hideModal('produtoModal');
+        await carregarProdutos();
+    } catch (error) {
+        console.error('Erro ao salvar produto:', error);
+        showError(`Erro ao salvar produto: ${error.message}`);
+    }
 }
 
 async function excluirProduto(codigo) {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
-        await excluirProduto(codigo);
-        carregarProdutos();
+        try {
+            await fetch(`${API_BASE_URL}/produtos/${codigo}`, {
+                method: 'DELETE'
+            });
+            await carregarProdutos();
+        } catch (error) {
+            console.error('Erro ao excluir produto:', error);
+            showError(`Erro ao excluir produto: ${error.message}`);
+        }
     }
 }
 
@@ -192,11 +229,55 @@ async function carregarClientes() {
     });
 }
 
+async function editarCliente(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/clientes/${id}`);
+        if (!response.ok) {
+            throw new Error('Erro ao buscar cliente');
+        }
+        const cliente = await response.json();
+
+        document.getElementById('clienteNome').value = cliente.nome;
+        document.getElementById('clienteCpf').value = cliente.cpf;
+        document.getElementById('clienteEmail').value = cliente.email;
+        document.getElementById('clienteDataNascimento').value = cliente.dataNascimento;
+
+        // Armazenar o ID do cliente sendo editado
+        document.getElementById('clienteModal').dataset.editandoId = id;
+
+        showModal('clienteModal');
+    } catch (error) {
+        console.error('Erro ao carregar cliente:', error);
+        showError(`Erro ao carregar cliente: ${error.message}`);
+    }
+}
+
 async function salvarCliente() {
-    const nome = document.getElementById('clienteNome').value;
-    const cpf = document.getElementById('clienteCpf').value;
-    const email = document.getElementById('clienteEmail').value;
+    const nome = document.getElementById('clienteNome').value.trim();
+    const cpf = document.getElementById('clienteCpf').value.trim();
+    const email = document.getElementById('clienteEmail').value.trim();
     const dataNascimento = document.getElementById('clienteDataNascimento').value;
+    const editandoId = document.getElementById('clienteModal').dataset.editandoId;
+
+    if (!nome) {
+        showError('O nome do cliente é obrigatório');
+        return;
+    }
+
+    if (!cpf) {
+        showError('O CPF do cliente é obrigatório');
+        return;
+    }
+
+    if (!email) {
+        showError('O email do cliente é obrigatório');
+        return;
+    }
+
+    if (!dataNascimento) {
+        showError('A data de nascimento é obrigatória');
+        return;
+    }
 
     const cliente = {
         nome,
@@ -205,27 +286,31 @@ async function salvarCliente() {
         dataNascimento
     };
 
-    await criarCliente(cliente);
-    hideModal('clienteModal');
-    carregarClientes();
-}
-
-async function editarCliente(id) {
-    const clientes = await listarClientes();
-    const cliente = clientes.find(c => c.id === id);
-
-    document.getElementById('clienteNome').value = cliente.nome;
-    document.getElementById('clienteCpf').value = cliente.cpf;
-    document.getElementById('clienteEmail').value = cliente.email;
-    document.getElementById('clienteDataNascimento').value = cliente.dataNascimento;
-
-    showModal('clienteModal');
+    try {
+        if (editandoId) {
+            await atualizarCliente(editandoId, cliente);
+            document.getElementById('clienteModal').dataset.editandoId = '';
+        } else {
+            await criarCliente(cliente);
+        }
+        hideModal('clienteModal');
+        await carregarClientes();
+    } catch (error) {
+        console.error('Erro ao salvar cliente:', error);
+    }
 }
 
 async function excluirCliente(id) {
     if (confirm('Tem certeza que deseja excluir este cliente?')) {
-        await excluirCliente(id);
-        carregarClientes();
+        try {
+            await fetch(`${API_BASE_URL}/clientes/${id}`, {
+                method: 'DELETE'
+            });
+            await carregarClientes();
+        } catch (error) {
+            console.error('Erro ao excluir cliente:', error);
+            showError(`Erro ao excluir cliente: ${error.message}`);
+        }
     }
 }
 
@@ -283,38 +368,77 @@ async function salvarVenda() {
     const produtosIds = Array.from(document.getElementById('vendaProdutos').selectedOptions).map(option => parseInt(option.value));
     const formaPagamento = document.getElementById('vendaFormaPagamento').value;
 
+    if (!clienteId) {
+        showError('Selecione um cliente');
+        return;
+    }
+
+    if (produtosIds.length === 0) {
+        showError('Selecione pelo menos um produto');
+        return;
+    }
+
+    if (!formaPagamento) {
+        showError('Selecione uma forma de pagamento');
+        return;
+    }
+
     const venda = {
         cliente: {
             id: clienteId
         },
-        produtos: produtosIds.map(id => ({ codigo: id })),
-        formaPagamento
+        produtos: produtosIds.map(id => ({
+            codigo: id
+        })),
+        formaPagamento: formaPagamento
     };
 
-    await criarVenda(venda);
-    hideModal('vendaModal');
-    carregarVendas();
+    try {
+        await criarVenda(venda);
+        hideModal('vendaModal');
+        await carregarVendas();
+    } catch (error) {
+        console.error('Erro ao salvar venda:', error);
+    }
 }
 
 async function editarVenda(id) {
-    const vendas = await listarVendas();
-    const venda = vendas.find(v => v.id === id);
+    try {
+        const response = await fetch(`${API_BASE_URL}/vendas/${id}`);
+        if (!response.ok) {
+            throw new Error('Erro ao buscar venda');
+        }
+        const venda = await response.json();
 
-    document.getElementById('vendaCliente').value = venda.cliente.id;
-    document.getElementById('vendaFormaPagamento').value = venda.formaPagamento;
+        document.getElementById('vendaCliente').value = venda.cliente.id;
+        document.getElementById('vendaFormaPagamento').value = venda.formaPagamento;
 
-    const produtosSelect = document.getElementById('vendaProdutos');
-    Array.from(produtosSelect.options).forEach(option => {
-        option.selected = venda.produtos.some(p => p.codigo === parseInt(option.value));
-    });
+        const produtosSelect = document.getElementById('vendaProdutos');
+        Array.from(produtosSelect.options).forEach(option => {
+            option.selected = venda.produtos.some(p => p.codigo === parseInt(option.value));
+        });
 
-    showModal('vendaModal');
+        // Armazenar o ID da venda sendo editada
+        document.getElementById('vendaModal').dataset.editandoId = id;
+
+        showModal('vendaModal');
+    } catch (error) {
+        console.error('Erro ao carregar venda:', error);
+        showError(`Erro ao carregar venda: ${error.message}`);
+    }
 }
 
 async function excluirVenda(id) {
     if (confirm('Tem certeza que deseja excluir esta venda?')) {
-        await excluirVenda(id);
-        carregarVendas();
+        try {
+            await fetch(`${API_BASE_URL}/vendas/${id}`, {
+                method: 'DELETE'
+            });
+            await carregarVendas();
+        } catch (error) {
+            console.error('Erro ao excluir venda:', error);
+            showError(`Erro ao excluir venda: ${error.message}`);
+        }
     }
 }
 

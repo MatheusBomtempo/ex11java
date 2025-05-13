@@ -7,10 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/clientes")
 public class ClienteController {
+    private static final Logger logger = LoggerFactory.getLogger(ClienteController.class);
 
     @Autowired
     private ClienteRepository clienteRepository;
@@ -29,13 +32,41 @@ public class ClienteController {
 
     @PostMapping
     public ResponseEntity<Cliente> criar(@Valid @RequestBody Cliente cliente) {
-        if (clienteRepository.existsByCpf(cliente.getCpf())) {
-            return ResponseEntity.badRequest().build();
+        try {
+            logger.info("Criando cliente: {}", cliente);
+
+            if (cliente.getNome() == null || cliente.getNome().trim().isEmpty()) {
+                logger.error("Nome do cliente não pode ser vazio");
+                return ResponseEntity.badRequest().build();
+            }
+
+            if (cliente.getCpf() == null || cliente.getCpf().trim().isEmpty()) {
+                logger.error("CPF do cliente não pode ser vazio");
+                return ResponseEntity.badRequest().build();
+            }
+
+            if (cliente.getEmail() == null || cliente.getEmail().trim().isEmpty()) {
+                logger.error("Email do cliente não pode ser vazio");
+                return ResponseEntity.badRequest().build();
+            }
+
+            if (clienteRepository.existsByCpf(cliente.getCpf())) {
+                logger.error("CPF já cadastrado: {}", cliente.getCpf());
+                return ResponseEntity.badRequest().build();
+            }
+
+            if (clienteRepository.existsByEmail(cliente.getEmail())) {
+                logger.error("Email já cadastrado: {}", cliente.getEmail());
+                return ResponseEntity.badRequest().build();
+            }
+
+            Cliente clienteSalvo = clienteRepository.save(cliente);
+            logger.info("Cliente criado com sucesso: {}", clienteSalvo);
+            return ResponseEntity.ok(clienteSalvo);
+        } catch (Exception e) {
+            logger.error("Erro ao criar cliente", e);
+            return ResponseEntity.internalServerError().build();
         }
-        if (clienteRepository.existsByEmail(cliente.getEmail())) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(clienteRepository.save(cliente));
     }
 
     @PutMapping("/{id}")

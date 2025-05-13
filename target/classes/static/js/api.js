@@ -12,8 +12,20 @@ function showError(message) {
 // Função para tratar erros da API
 async function handleApiError(response) {
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro ao processar a requisição');
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Erro ao processar a requisição';
+        
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.erro || errorMessage;
+        } else {
+            const text = await response.text();
+            if (text) {
+                errorMessage = text;
+            }
+        }
+        
+        throw new Error(errorMessage);
     }
     return response;
 }
@@ -89,37 +101,37 @@ async function listarProdutos() {
 }
 
 async function criarProduto(produto) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/produtos`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(produto)
-        });
-        await handleApiError(response);
-        return await response.json();
-    } catch (error) {
-        showError(`Erro ao criar produto: ${error.message}`);
-        throw error;
+    const response = await fetch(`${API_BASE_URL}/produtos`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(produto)
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
     }
+
+    return response.json();
 }
 
-async function atualizarProduto(codigo, produto) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/produtos/${codigo}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(produto)
-        });
-        await handleApiError(response);
-        return await response.json();
-    } catch (error) {
-        showError(`Erro ao atualizar produto: ${error.message}`);
-        throw error;
+async function atualizarProduto(id, produto) {
+    const response = await fetch(`${API_BASE_URL}/produtos/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(produto)
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
     }
+
+    return response.json();
 }
 
 async function excluirProduto(codigo) {
@@ -147,48 +159,86 @@ async function listarClientes() {
 }
 
 async function criarCliente(cliente) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/clientes`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(cliente)
-        });
-        await handleApiError(response);
-        return await response.json();
-    } catch (error) {
-        showError(`Erro ao criar cliente: ${error.message}`);
-        throw error;
+    const response = await fetch(`${API_BASE_URL}/clientes`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(cliente)
+    });
+
+    if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Erro ao criar cliente';
+        
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.erro || errorMessage;
+        } else {
+            const text = await response.text();
+            if (text) {
+                errorMessage = text;
+            }
+        }
+        
+        showError(errorMessage);
+        throw new Error(errorMessage);
     }
+
+    return await response.json();
 }
 
 async function atualizarCliente(id, cliente) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/clientes/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(cliente)
-        });
-        await handleApiError(response);
-        return await response.json();
-    } catch (error) {
-        showError(`Erro ao atualizar cliente: ${error.message}`);
-        throw error;
+    const response = await fetch(`${API_BASE_URL}/clientes/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(cliente)
+    });
+
+    if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Erro ao atualizar cliente';
+        
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.erro || errorMessage;
+        } else {
+            const text = await response.text();
+            if (text) {
+                errorMessage = text;
+            }
+        }
+        
+        showError(errorMessage);
+        throw new Error(errorMessage);
     }
+
+    return await response.json();
 }
 
 async function excluirCliente(id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/clientes/${id}`, {
-            method: 'DELETE'
-        });
-        await handleApiError(response);
-    } catch (error) {
-        showError(`Erro ao excluir cliente: ${error.message}`);
-        throw error;
+    const response = await fetch(`${API_BASE_URL}/clientes/${id}`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Erro ao excluir cliente';
+        
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.erro || errorMessage;
+        } else {
+            const text = await response.text();
+            if (text) {
+                errorMessage = text;
+            }
+        }
+        
+        showError(errorMessage);
+        throw new Error(errorMessage);
     }
 }
 
@@ -205,47 +255,85 @@ async function listarVendas() {
 }
 
 async function criarVenda(venda) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/vendas`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(venda)
-        });
-        await handleApiError(response);
-        return await response.json();
-    } catch (error) {
-        showError(`Erro ao criar venda: ${error.message}`);
-        throw error;
+    const response = await fetch(`${API_BASE_URL}/vendas`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(venda)
+    });
+
+    if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Erro ao criar venda';
+        
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.erro || errorMessage;
+        } else {
+            const text = await response.text();
+            if (text) {
+                errorMessage = text;
+            }
+        }
+        
+        showError(errorMessage);
+        throw new Error(errorMessage);
     }
+
+    return await response.json();
 }
 
 async function atualizarVenda(id, venda) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/vendas/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(venda)
-        });
-        await handleApiError(response);
-        return await response.json();
-    } catch (error) {
-        showError(`Erro ao atualizar venda: ${error.message}`);
-        throw error;
+    const response = await fetch(`${API_BASE_URL}/vendas/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(venda)
+    });
+
+    if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Erro ao atualizar venda';
+        
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.erro || errorMessage;
+        } else {
+            const text = await response.text();
+            if (text) {
+                errorMessage = text;
+            }
+        }
+        
+        showError(errorMessage);
+        throw new Error(errorMessage);
     }
+
+    return await response.json();
 }
 
 async function excluirVenda(id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/vendas/${id}`, {
-            method: 'DELETE'
-        });
-        await handleApiError(response);
-    } catch (error) {
-        showError(`Erro ao excluir venda: ${error.message}`);
-        throw error;
+    const response = await fetch(`${API_BASE_URL}/vendas/${id}`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Erro ao excluir venda';
+        
+        if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.erro || errorMessage;
+        } else {
+            const text = await response.text();
+            if (text) {
+                errorMessage = text;
+            }
+        }
+        
+        showError(errorMessage);
+        throw new Error(errorMessage);
     }
 } 
